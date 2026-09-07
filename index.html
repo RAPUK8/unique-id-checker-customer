@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>唯一ID校验助手</title>
+<style>
+:root{--brand:#3370ff;--brand-light:#e8f0ff;--green:#00b42a;--green-light:#e8ffea;--purple:#722ed1;--purple-light:#f3e8ff;--orange:#ff7d00;--orange-light:#fff7e8;--bg:#f7f8fa;--card:#fff;--border:#e5e6eb;--text:#1d2129;--text-secondary:#86909c;--danger:#f53f3f;--danger-light:#ffece8}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.container{max-width:800px;margin:0 auto;padding:24px 20px 60px}
+.header{text-align:center;margin-bottom:24px}
+.header h1{font-size:24px;font-weight:700;color:var(--text);margin-bottom:6px}
+.header .subtitle{font-size:14px;color:var(--text-secondary)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px}
+.card-title{font-size:17px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title .dot{width:6px;height:6px;border-radius:50%;background:var(--brand);display:inline-block}
+.mode-tabs{display:flex;background:#f2f3f5;border-radius:8px;padding:3px;margin-bottom:20px;gap:2px}
+.mode-tab{flex:1;padding:10px 8px;text-align:center;font-size:14px;font-weight:500;color:var(--text-secondary);border:none;background:transparent;border-radius:6px;cursor:pointer;transition:all .2s}
+.mode-tab:hover{color:var(--text)}
+.mode-tab.active{background:#fff;color:var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.mode-panel{display:none}.mode-panel.active{display:block}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px}
+.form-group label .required{color:var(--danger);margin-left:2px}
+.form-input{width:100%;padding:9px 12px;font-size:14px;font-family:inherit;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(51,112,255,.12)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.form-row{grid-template-columns:1fr}}
+.btn{padding:10px 24px;font-size:14px;font-weight:500;border:none;border-radius:6px;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;width:100%}
+.btn-primary{background:var(--brand);color:#fff;justify-content:center}
+.btn-primary:hover{opacity:.85}
+.result-box{margin-top:0}
+.result-card{padding:20px;border-radius:10px;text-align:center}
+.result-card.found{background:var(--green-light);border:1px solid #b4e6b4}
+.result-card.not-found{background:var(--orange-light);border:1px solid #ffe0b2}
+.result-method{font-size:28px;font-weight:700;margin-bottom:6px}
+.result-card.found .result-method{color:var(--green)}
+.result-card.not-found .result-method{color:var(--orange)}
+.result-detail{font-size:13px;color:var(--text-secondary);line-height:1.7}
+.result-note{margin-top:10px;padding:10px 14px;background:#fff;border-radius:6px;font-size:13px;color:var(--text);text-align:left;line-height:1.7}
+.result-image{margin-top:10px;max-width:100%;border-radius:6px}
+.note-block{background:var(--orange-light);border:1px solid #ffe0b2;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text);line-height:1.7}
+.history-card{margin-top:0}
+.history-list{max-height:260px;overflow-y:auto}
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f2f3f5;font-size:13px;cursor:pointer;transition:background .15s}
+.history-item:hover{background:var(--brand-light)}
+.history-item .info{flex:1}
+.history-item .game-name{font-weight:600;color:var(--text)}
+.history-item .client-name{color:var(--text-secondary);margin-left:6px}
+.history-item .method{margin-left:8px}
+.history-item .time{font-size:11px;color:var(--text-secondary);white-space:nowrap;margin-left:12px}
+.history-item .del-btn{margin-left:8px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:14px;padding:2px 6px}
+.history-item .del-btn:hover{color:var(--danger)}
+.method-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.method-badge.role{background:var(--purple-light);color:var(--purple)}
+.method-badge.channel{background:var(--brand-light);color:var(--brand)}
+.method-badge.account{background:var(--orange-light);color:var(--orange)}
+.empty-state{text-align:center;padding:24px;color:var(--text-secondary);font-size:13px}
+.notice-banner{background:#fff7e8;border:1px solid #ffe0b2;border-left:4px solid var(--orange);border-radius:8px;padding:14px 18px;margin-bottom:12px;font-size:14px;font-weight:500;color:#6b3a00;line-height:1.7}
+.cloud-sync{font-size:12px;color:var(--text-secondary);text-align:right;margin:-4px 2px 16px}
+.cloud-sync.ok{color:var(--green)}
+.cloud-sync.error{color:var(--orange)}
+.clear-history{background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;float:right;margin-top:-4px}
+.clear-history:hover{text-decoration:underline}
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:toastIn .3s ease;max-width:360px}
+.toast.success{background:var(--green);color:#fff}
+.toast.error{background:var(--danger);color:#fff}
+.toast.info{background:var(--brand);color:#fff}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-10px)}}
+@media(max-width:640px){.container{padding:16px 12px 40px}.card{padding:16px}}
+/* Client query result tables */
+.client-result-section{margin-top:12px;text-align:left}
+.client-result-section h3{font-size:15px;font-weight:600;margin-bottom:8px;color:var(--text)}
+.client-result-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px}
+.client-result-table th{background:#f7f8fa;padding:8px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)}
+.client-result-table td{padding:8px 10px;border-bottom:1px solid #f2f3f5}
+.client-result-table tbody tr:hover{background:var(--brand-light)}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header"><h1>唯一ID校验助手</h1><div class="subtitle">输入游戏和客户端名称，快速查询校验方式</div></div>
+
+<!-- Important notice -->
+<div class="notice-banner">⚠ 注意：只要涉及含原始账号的客户端，在换绑环节都要保留原始账号截图；不能因部分客户端校验的是角色ID就不保留原始账号截图（举例：三国：谋定天下的所有客户端）</div>
+<div class="cloud-sync" id="cloudSync">正在同步云端规则...</div>
+
+<!-- Query card -->
+<div class="card">
+<div class="card-title"><span class="dot"></span>查询校验方式</div>
+<div class="mode-tabs">
+<button class="mode-tab active" onclick="switchQueryMode('gc',this)">按游戏+客户端</button>
+<button class="mode-tab" onclick="switchQueryMode('client',this)">按客户端查询</button>
+<button class="mode-tab" onclick="switchQueryMode('game',this)">按游戏查询</button>
+</div>
+<!-- Mode: game+client -->
+<div class="mode-panel active" id="qp-gc">
+<div class="form-row">
+<div class="form-group"><label>游戏名称 <span class="required">*</span></label><input type="text" class="form-input" id="q-game" list="dl-games" autocomplete="off" placeholder="输入或选择游戏名称"><datalist id="dl-games"></datalist></div>
+<div class="form-group"><label>客户端名称 <span class="required">*</span></label><input type="text" class="form-input" id="q-client" list="dl-clients" autocomplete="off" placeholder="输入或选择客户端名称"><datalist id="dl-clients"></datalist></div>
+</div>
+<button class="btn btn-primary" onclick="doQuery()">查询</button>
+</div>
+<!-- Mode: client only -->
+<div class="mode-panel" id="qp-client">
+<div class="form-group"><label>客户端名称 <span class="required">*</span></label><input type="text" class="form-input" id="q-client2" list="dl-clients2" autocomplete="off" placeholder="输入或选择客户端名称"><datalist id="dl-clients2"></datalist></div>
+<button class="btn btn-primary" onclick="doClientQuery()">查询</button>
+</div>
+<!-- Mode: game only -->
+<div class="mode-panel" id="qp-game">
+<div class="form-group"><label>游戏名称 <span class="required">*</span></label><input type="text" class="form-input" id="q-game2" list="dl-games2" autocomplete="off" placeholder="输入或选择游戏名称"><datalist id="dl-games2"></datalist></div>
+<button class="btn btn-primary" onclick="doGameQuery()">查询</button>
+</div>
+<div class="result-box" id="resultBox"></div>
+</div>
+
+<!-- History card -->
+<div class="card history-card">
+<div class="card-title"><span class="dot"></span>查询历史 <button class="clear-history" onclick="clearHistory()">清空</button></div>
+<div class="history-list" id="historyList"><div class="empty-state">暂无查询记录</div></div>
+</div>
+
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="supabase-config.js"></script>
+
+<script>
+// ============================================================
+// EMBEDDED DATA — all base rules baked in, no server required
+// ============================================================
+var DATA = {
+  note_original_account: "只要涉及含原始账号的客户端，在换绑环节都要保留原始账号截图；不能因部分客户端校验的是角色ID就不保留原始账号截图（举例：三国：谋定天下的所有客户端）",
+  channelId_clients: ["紫龙","完美世界通行证","祖龙","游族","游卡","谷歌","云蟾","游戏Fan","鹰角","37","小7手游","诗悦","Steam","果盘","Superpop","XY游戏","乐牛","海南冰川","66","YY","顺网","凉屋游戏","多多","9665","悠星","银汉","无端","天游端游","心动","微信","梦玩","拓维科技"],
+  fixedChannelId_clients: ["梦玩","拓维科技"],
+  fixedChannelIdExceptions: {"拓维科技": ["植物大战僵尸2【苹果版】"]},
+  excludedPairs: {"三国：天下归心|XY游戏": true},
+  clientExceptions: {
+    "TAP": ["佣兵小镇","保卫向日葵","出发吧麦芬","名将杀","向僵尸开炮","妖怪金手指","宗师之上","归龙潮","心动小镇","快来当领主","群英风华录","英勇之地手游","鸣潮"],
+    "抖音": ["保卫向日葵","向僵尸开炮","妖怪金手指","寻道大千","斗罗大陆：魂师对决","无尽冬日","时空猎人3","烈焰觉醒","狱国争霸","英雄没有闪"],
+    "华为": ["万龙觉醒","三国：谋定天下","宗师之上","海岛奇兵","群英风华录","潮汐守望者"],
+    "vivo": ["口袋觉醒","宗师之上","归龙潮","斗罗大陆：史莱克学院","海岛奇兵","群英风华录","潮汐守望者"],
+    "小米": ["三国：谋定天下","海岛奇兵"],
+    "4399": ["三国：谋定天下","小小英雄","归龙潮","海盗骑兵"],
+    "哔哩哔哩": ["三国：谋定天下","宗师之上","鸣潮","潮汐守望者"],
+    "魅族&魅玩": ["三国杀","忍者必须死3","群英风华录","口袋觉醒"],
+    "QQ": ["剑与远征：启程","三国：谋定天下","万龙觉醒","潮汐守望者"],
+    "巨人": ["超自然行动组","原始征途"],
+    "英雄互娱": ["二重螺旋","创造与魔法"],
+    "360": ["三国杀","奶块"],
+    "莉莉丝": ["万龙觉醒","剑与远征：启程"],
+    "多益": ["王于兴师","幻唐志：逍遥外传"],
+    "叠纸": ["无限暖暖","恋与深空"],
+    "雷霆": ["问道"],
+    "当乐": ["攻城掠地"],
+    "百田": ["奥奇传说手游"],
+    "贪玩": ["斗罗大陆：史莱克学院"],
+    "西山居（金山）": ["尘白禁区"],
+    "掌趣": ["一拳超人：最强之男"],
+    "坚果": ["秦皇汉武"],
+    "盛趣（盛大）": {"渠道ID": ["冒险岛怀旧服"], "角色ID": ["云海之下","传奇世界无双","传奇天下","传奇新百区-盟重神兵","星辰变（端游）","泡泡堂（PC）","血族","超级地域之光","龙之谷世界"]}
+  },
+  roleId_clients: ["MuMu","雷电","朝夕光年","畅游","初晰互动","青雀","三九互娱","中手游","91wan","乐商店（联想）","OPPO","玩心不止","七龙（欢娱游戏）","勇仕","炎魂","星嘉","星辉天拓","龙潮阁","灵象","库洛","HIVE","点触","傲世堂","麟贝互娱","鲲麟","facebook","MG","PMC","青山竹石","深蓝互动","扬讯","益世界","擎天柱","散爆","米茄","六分鱼","九宫","幻游","畅趣","哎哟互娱"],
+  roleId_games: ["无尽冬日","鸣潮","向僵尸开炮","潮汐守望者","永远的蔚蓝星球","武林外传：十年之约","时光大爆炸"],
+  specialGames: {
+    "三国：谋定天下": {"default": "角色ID", "exceptions": {"vivo": "渠道ID"}},
+    "三国杀": {"rules": {"渠道ID": ["4399","vivo","华为","哔哩哔哩","小米"], "渠道登录帐号": ["QQ","微信","游卡"], "角色ID": ["360","OPPO","一加","乐商店","努比亚","应用汇","百度","荣耀","雷电","魅族"]}},
+    "斗罗大陆（手游）": {"default": "渠道ID", "roleId_clients": ["萝卜玩","425"]},
+    "创造与魔法": {"default": "渠道ID", "roleId_clients": ["好游快爆","英雄互娱"]}
+  },
+  overrides: {},
+  images: {}
+};
+
+// ============================================================
+// Client alias mapping
+// ============================================================
+var CLIENT_ALIASES = {
+  "tap":"TAP","taptap":"TAP","Tap":"TAP","TapTap":"TAP","TAPTAP":"TAP",
+  "bilibili":"哔哩哔哩","b站":"哔哩哔哩","B站":"哔哩哔哩","Bilibili":"哔哩哔哩",
+  "qq":"QQ","Qq":"QQ",
+  "wechat":"微信","WeChat":"微信",
+  "oppo":"OPPO","Oppo":"OPPO",
+  "steam":"Steam","STEAM":"Steam",
+  "mumu":"MuMu","MUMU":"MuMu","Mumu":"MuMu",
+  "hive":"HIVE","Hive":"HIVE",
+  "facebook":"facebook","Facebook":"facebook",
+  "mg":"MG","Mg":"MG",
+  "pmc":"PMC","Pmc":"PMC",
+  "魅族":"魅族&魅玩","盛大":"盛趣（盛大）","盛趣":"盛趣（盛大）"
+};
+function normalizeClient(c) { return CLIENT_ALIASES[c] || c; }
+
+// ============================================================
+// Query history (in-memory for current page session)
+// ============================================================
+var QUERY_HISTORY = [];
+function loadHistory() { return QUERY_HISTORY; }
+function saveHistory(h) { QUERY_HISTORY = h.slice(0, 50); }
+function addHistory(game, client, method, note) { var h = loadHistory().slice(); h.unshift({game:game, client:client, method:method, note:note||"", time:new Date().toLocaleString()}); saveHistory(h); renderHistory(); }
+function clearHistory() { QUERY_HISTORY = []; renderHistory(); }
+function renderHistory() {
+  var list = document.getElementById("historyList");
+  var h = loadHistory();
+  if (h.length === 0) { list.innerHTML = '<div class="empty-state">暂无查询记录</div>'; return; }
+  var s = "";
+  h.forEach(function(item, i) {
+    var mc = "";
+    if (item.method === "角色ID") mc = "role";
+    else if (item.method === "渠道ID") mc = "channel";
+    else if (item.method === "渠道登录帐号") mc = "account";
+    s += '<div class="history-item" onclick="fillQuery(\'' + escJ(item.game) + '\',\'' + escJ(item.client) + '\')">'
+      + '<div class="info"><span class="game-name">' + escH(item.game) + '</span>'
+      + '<span class="client-name">' + escH(item.client) + '</span>'
+      + '<span class="method"><span class="method-badge ' + mc + '">' + escH(item.method) + '</span></span></div>'
+      + '<span class="time">' + escH(item.time) + '</span>'
+      + '<button class="del-btn" onclick="event.stopPropagation();removeHistory(' + i + ')" title="删除">×</button></div>';
+  });
+  list.innerHTML = s;
+}
+function removeHistory(i) { var h = loadHistory(); h.splice(i, 1); saveHistory(h); renderHistory(); }
+function fillQuery(g, c) {
+  document.getElementById("q-game").value = g;
+  document.getElementById("q-client").value = c;
+  // Switch to game+client mode
+  var tabs = document.querySelectorAll(".mode-tab");
+  tabs[0].click();
+  doQuery();
+}
+
+// ============================================================
+// Query mode switch
+// ============================================================
+function switchQueryMode(mode, btn) {
+  document.querySelectorAll(".mode-tab").forEach(function(t) { t.classList.remove("active"); });
+  document.querySelectorAll(".mode-panel").forEach(function(p) { p.classList.remove("active"); });
+  btn.classList.add("active");
+  document.getElementById("qp-" + mode).classList.add("active");
+  document.getElementById("resultBox").innerHTML = "";
+}
+
+// ============================================================
+// 7-layer query engine
+// ============================================================
+function queryMethod(game, client) {
+  var oc = normalizeClient(client);
+
+  // Fixed client-wide rules override all game-level defaults while allowing explicit exceptions
+  if (DATA.fixedChannelId_clients && DATA.fixedChannelId_clients.indexOf(oc) !== -1) {
+    var fixedOverride = DATA.overrides && DATA.overrides[game + "|" + oc];
+    var fixedExceptions = DATA.fixedChannelIdExceptions && DATA.fixedChannelIdExceptions[oc];
+    var isFixedException = Array.isArray(fixedExceptions) && fixedExceptions.indexOf(game) !== -1;
+    return {
+      method: isFixedException ? "角色ID" : "渠道ID",
+      source: isFixedException ? "全游戏渠道ID客户端例外" : "全游戏统一渠道ID客户端列表",
+      note: fixedOverride ? (fixedOverride.note || "") : "",
+      image: fixedOverride ? (fixedOverride.image || "") : ""
+    };
+  }
+
+  // Layer 1: admin overrides (highest priority)
+  if (DATA.overrides) {
+    var ok = game + "|" + oc;
+    if (DATA.overrides[ok]) {
+      return { method: DATA.overrides[ok].method, source: "管理员配置", note: DATA.overrides[ok].note || "", image: DATA.overrides[ok].image || "" };
+    }
+  }
+
+  // Exact exclusions prevent a generic client rule from matching the wrong client/game combination
+  if (DATA.excludedPairs && DATA.excludedPairs[game + "|" + oc]) {
+    return null;
+  }
+
+  // Layer 2: specialGames
+  if (DATA.specialGames && DATA.specialGames[game]) {
+    var sg = DATA.specialGames[game];
+    // 2a: rules map (exact client→method)
+    if (sg.rules) {
+      var rk = Object.keys(sg.rules);
+      for (var ri = 0; ri < rk.length; ri++) {
+        var meth = rk[ri];
+        if (Array.isArray(sg.rules[meth]) && sg.rules[meth].indexOf(oc) !== -1) {
+          return { method: meth, source: "特殊游戏规则(" + game + ")", note: "", image: "" };
+        }
+      }
+    }
+    // 2b: roleId_clients within specialGame
+    if (sg.roleId_clients && sg.roleId_clients.indexOf(oc) !== -1) {
+      return { method: "角色ID", source: "特殊游戏规则(" + game + ")-角色ID客户端", note: "", image: "" };
+    }
+    // 2c: exceptions within specialGame
+    if (sg.exceptions && sg.exceptions[oc]) {
+      return { method: sg.exceptions[oc], source: "特殊游戏规则(" + game + ")-例外", note: "", image: "" };
+    }
+    // 2d: specialGame default
+    if (sg.default) {
+      return { method: sg.default, source: "特殊游戏规则(" + game + ")-默认", note: "", image: "" };
+    }
+  }
+
+  // Layer 3: roleId_games (entire game uses 角色ID)
+  if (DATA.roleId_games && DATA.roleId_games.indexOf(game) !== -1) {
+    return { method: "角色ID", source: "角色ID游戏列表", note: "", image: "" };
+  }
+
+  // Layer 4: roleId_clients (entire client uses 角色ID)
+  if (DATA.roleId_clients && DATA.roleId_clients.indexOf(oc) !== -1) {
+    return { method: "角色ID", source: "角色ID客户端列表", note: "", image: "" };
+  }
+
+  // Layer 5: channelId_clients (with clientExceptions check)
+  if (DATA.channelId_clients && DATA.channelId_clients.indexOf(oc) !== -1) {
+    // Layer 6: clientExceptions for this channelId client
+    if (DATA.clientExceptions && DATA.clientExceptions[oc]) {
+      var ce = DATA.clientExceptions[oc];
+      if (Array.isArray(ce)) {
+        if (ce.indexOf(game) !== -1) return { method: "角色ID", source: "客户端例外(" + oc + ")", note: "", image: "" };
+      } else if (ce && typeof ce === "object") {
+        var ck = Object.keys(ce);
+        for (var ci = 0; ci < ck.length; ci++) {
+          if (Array.isArray(ce[ck[ci]]) && ce[ck[ci]].indexOf(game) !== -1) {
+            return { method: ck[ci], source: "客户端例外(" + oc + "-" + ck[ci] + ")", note: "", image: "" };
+          }
+        }
+      }
+    }
+    return { method: "渠道ID", source: "渠道ID客户端列表", note: "", image: "" };
+  }
+
+  // Layer 5b: clientExceptions for non-channelId clients
+  if (DATA.clientExceptions && DATA.clientExceptions[oc]) {
+    var ce2 = DATA.clientExceptions[oc];
+    if (Array.isArray(ce2)) {
+      if (ce2.indexOf(game) !== -1) return { method: "角色ID", source: "客户端例外(" + oc + ")", note: "", image: "" };
+    } else if (ce2 && typeof ce2 === "object") {
+      var ck2 = Object.keys(ce2);
+      for (var ci2 = 0; ci2 < ck2.length; ci2++) {
+        if (Array.isArray(ce2[ck2[ci2]]) && ce2[ck2[ci2]].indexOf(game) !== -1) {
+          return { method: ck2[ci2], source: "客户端例外(" + oc + "-" + ck2[ci2] + ")", note: "", image: "" };
+        }
+      }
+    }
+  }
+
+  // Layer 7: fallback — no rule found
+  return null;
+}
+
+// ============================================================
+// doQuery (game + client)
+// ============================================================
+function doQuery() {
+  var game = document.getElementById("q-game").value.trim();
+  var client = document.getElementById("q-client").value.trim();
+  if (!game || !client) { showToast("请输入游戏名称和客户端名称", "error"); return; }
+  var r = queryMethod(game, client);
+  var box = document.getElementById("resultBox");
+  if (r) {
+    var mc = "";
+    if (r.method === "角色ID") mc = "role";
+    else if (r.method === "渠道ID") mc = "channel";
+    else if (r.method === "渠道登录帐号") mc = "account";
+    var s = '<div class="result-card found"><div class="result-method">' + escH(r.method) + '</div>'
+      + '<div class="result-detail">游戏: ' + escH(game) + ' | 客户端: ' + escH(client)
+      + '<br>规则来源: ' + escH(r.source) + '</div>';
+    if (r.note) s += '<div class="result-note">' + escH(r.note) + '</div>';
+    if (r.image) s += '<img class="result-image" src="' + escH(r.image) + '" onerror="this.style.display=\'none\'">';
+    s += '</div>';
+    box.innerHTML = s;
+    addHistory(game, client, r.method, r.note);
+  } else {
+    box.innerHTML = '<div class="result-card not-found"><div class="result-method">未找到规则</div>'
+      + '<div class="result-detail">游戏: ' + escH(game) + ' | 客户端: ' + escH(client)
+      + '<br>该组合未配置校验方式，请联系管理员确认</div></div>';
+  }
+}
+
+// ============================================================
+// doClientQuery (client-only mode)
+// ============================================================
+function doClientQuery() {
+  var client = document.getElementById("q-client2").value.trim();
+  if (!client) { showToast("请输入客户端名称", "error"); return; }
+  var oc = normalizeClient(client);
+  var box = document.getElementById("resultBox");
+  var s = "";
+
+  var isFixedChannel = DATA.fixedChannelId_clients && DATA.fixedChannelId_clients.indexOf(oc) !== -1;
+  var isChannel = isFixedChannel || (DATA.channelId_clients && DATA.channelId_clients.indexOf(oc) !== -1);
+  var isRole = DATA.roleId_clients && DATA.roleId_clients.indexOf(oc) !== -1;
+
+  // Collect all info for this client
+  var sections = [];
+
+  // 1. Check overrides
+  var overrideGames = [];
+  if (DATA.overrides) {
+    Object.keys(DATA.overrides).forEach(function(k) {
+      var p = k.split("|");
+      if (p[1] === oc) overrideGames.push({game: p[0], method: DATA.overrides[k].method, note: DATA.overrides[k].note || "", image: DATA.overrides[k].image || ""});
+    });
+  }
+  if (overrideGames.length > 0) {
+    sections.push({title: "管理员配置 (" + overrideGames.length + "个游戏)", items: overrideGames});
+  }
+
+  // 2. Check specialGames referencing this client
+  var specialItems = [];
+  if (DATA.specialGames) {
+    Object.keys(DATA.specialGames).forEach(function(game) {
+      var sg = DATA.specialGames[game];
+      if (sg.rules) {
+        Object.keys(sg.rules).forEach(function(meth) {
+          if (Array.isArray(sg.rules[meth]) && sg.rules[meth].indexOf(oc) !== -1) {
+            specialItems.push({game: game, method: meth, note: "特殊游戏规则"});
+          }
+        });
+      }
+      if (sg.roleId_clients && sg.roleId_clients.indexOf(oc) !== -1) {
+        specialItems.push({game: game, method: "角色ID", note: "特殊游戏-角色ID客户端"});
+      }
+      if (sg.exceptions && sg.exceptions[oc]) {
+        specialItems.push({game: game, method: sg.exceptions[oc], note: "特殊游戏-例外"});
+      }
+    });
+  }
+  if (specialItems.length > 0) {
+    sections.push({title: "特殊游戏规则 (" + specialItems.length + "个)", items: specialItems});
+  }
+
+  // 3. Base rule
+  if (isRole) {
+    s += '<div class="result-card found"><div class="result-method">角色ID</div>'
+      + '<div class="result-detail">客户端: ' + escH(oc) + '<br>该客户端所有游戏统一使用<strong>角色ID</strong></div></div>';
+  } else if (isChannel) {
+    var exGames = [];
+    if (isFixedChannel && DATA.fixedChannelIdExceptions && Array.isArray(DATA.fixedChannelIdExceptions[oc])) {
+      exGames = DATA.fixedChannelIdExceptions[oc];
+    } else if (!isFixedChannel && DATA.clientExceptions && DATA.clientExceptions[oc]) {
+      var ce = DATA.clientExceptions[oc];
+      if (Array.isArray(ce)) exGames = ce;
+    }
+    s += '<div class="result-card found"><div class="result-method">渠道ID</div>'
+      + '<div class="result-detail">客户端: ' + escH(oc) + '<br>'
+      + (isFixedChannel && exGames.length === 0 ? '该客户端所有游戏统一使用<strong>渠道ID</strong>' : '该客户端默认使用<strong>渠道ID</strong>');
+    if (exGames.length > 0) {
+      s += '<br><br>例外游戏（使用角色ID）: ' + exGames.map(function(g) { return escH(g); }).join("、");
+    }
+    s += '</div></div>';
+  } else if (DATA.clientExceptions && DATA.clientExceptions[oc]) {
+    // Client is in exceptions but not a base channelId/roleId client
+    var ce = DATA.clientExceptions[oc];
+    var exList = [];
+    if (Array.isArray(ce)) {
+      exList = ce.map(function(g) { return {game: g, method: "角色ID"}; });
+    } else if (ce && typeof ce === "object") {
+      Object.keys(ce).forEach(function(meth) {
+        if (Array.isArray(ce[meth])) ce[meth].forEach(function(g) { exList.push({game: g, method: meth}); });
+      });
+    }
+    s += '<div class="result-card found"><div class="result-method">例外规则</div>'
+      + '<div class="result-detail">客户端: ' + escH(oc) + '<br>该客户端有 ' + exList.length + ' 个游戏的例外规则</div></div>';
+    if (exList.length > 0) {
+      sections.push({title: "客户端例外 (" + exList.length + "个游戏)", items: exList.map(function(e) { return {game: e.game, method: e.method, note: ""}; })});
+    }
+  } else if (sections.length > 0) {
+    // 管理员配置或特殊规则同样表示客户端已找到，不能误报“未找到客户端”
+    var configuredMethods = {};
+    var configuredCount = 0;
+    sections.forEach(function(sec) {
+      sec.items.forEach(function(item) {
+        if (item.method) configuredMethods[item.method] = 1;
+        configuredCount++;
+      });
+    });
+    var methodNames = Object.keys(configuredMethods);
+    var summaryMethod = methodNames.length === 1 ? methodNames[0] : "已找到客户端配置";
+    s += '<div class="result-card found"><div class="result-method">' + escH(summaryMethod) + '</div>'
+      + '<div class="result-detail">客户端: ' + escH(client) + '<br>已找到 ' + configuredCount + ' 条按游戏配置，具体规则请查看下方</div></div>';
+  } else {
+    s += '<div class="result-card not-found"><div class="result-method">未找到客户端</div>'
+      + '<div class="result-detail">客户端: ' + escH(client) + '<br>该客户端暂无基础规则、管理员配置或特殊游戏规则，请指定游戏名称进行精确查询</div></div>';
+  }
+
+  // Render detail sections as tables
+  if (sections.length > 0) {
+    s += '<div class="client-result-section">';
+    sections.forEach(function(sec) {
+      s += '<h3>' + escH(sec.title) + '</h3><table class="client-result-table"><thead><tr><th>游戏</th><th>校验方式</th><th>备注</th></tr></thead><tbody>';
+      sec.items.forEach(function(item) {
+        var mc = "";
+        if (item.method === "角色ID") mc = "role";
+        else if (item.method === "渠道ID") mc = "channel";
+        else if (item.method === "渠道登录帐号") mc = "account";
+        s += '<tr><td>' + escH(item.game) + '</td><td><span class="method-badge ' + mc + '">' + escH(item.method) + '</span></td><td>' + escH(item.note || "-") + '</td></tr>';
+        if (item.image) s += '<tr><td colspan="3" style="padding:6px 10px"><img class="result-image" src="' + escH(item.image) + '" onerror="this.parentNode.parentNode.style.display=\'none\'"></td></tr>';
+      });
+      s += '</tbody></table>';
+    });
+    s += '</div>';
+  }
+
+  box.innerHTML = s;
+}
+
+// ============================================================
+// doGameQuery (game-only mode)
+// ============================================================
+function collectClientsForGame(game) {
+  var clients = {};
+
+  if (DATA.overrides) {
+    Object.keys(DATA.overrides).forEach(function(k) {
+      var p = k.split("|");
+      if (p[0] === game && p[1]) clients[p[1]] = 1;
+    });
+  }
+
+  var sg = DATA.specialGames && DATA.specialGames[game];
+  if (sg) {
+    if (sg.exceptions) Object.keys(sg.exceptions).forEach(function(c) { clients[c] = 1; });
+    if (sg.rules) Object.keys(sg.rules).forEach(function(method) {
+      if (Array.isArray(sg.rules[method])) sg.rules[method].forEach(function(c) { clients[c] = 1; });
+    });
+    if (Array.isArray(sg.roleId_clients)) sg.roleId_clients.forEach(function(c) { clients[c] = 1; });
+  }
+
+  if (DATA.clientExceptions) {
+    Object.keys(DATA.clientExceptions).forEach(function(c) {
+      var rule = DATA.clientExceptions[c];
+      if (Array.isArray(rule) && rule.indexOf(game) !== -1) clients[c] = 1;
+      else if (rule && typeof rule === "object") Object.keys(rule).forEach(function(method) {
+        if (Array.isArray(rule[method]) && rule[method].indexOf(game) !== -1) clients[c] = 1;
+      });
+    });
+  }
+
+  if (DATA.fixedChannelIdExceptions) {
+    Object.keys(DATA.fixedChannelIdExceptions).forEach(function(c) {
+      if (Array.isArray(DATA.fixedChannelIdExceptions[c]) && DATA.fixedChannelIdExceptions[c].indexOf(game) !== -1) clients[c] = 1;
+    });
+  }
+
+  return Object.keys(clients).sort();
+}
+
+function doGameQuery() {
+  var game = document.getElementById("q-game2").value.trim();
+  if (!game) { showToast("请输入游戏名称", "error"); return; }
+
+  var box = document.getElementById("resultBox");
+  var clients = collectClientsForGame(game);
+  var rows = [];
+  clients.forEach(function(client) {
+    var r = queryMethod(game, client);
+    if (r) rows.push({client: client, method: r.method, source: r.source, note: r.note || "", image: r.image || ""});
+  });
+
+  var defaultRule = null;
+  var sg = DATA.specialGames && DATA.specialGames[game];
+  if (sg && sg.default) defaultRule = {method: sg.default, source: "特殊游戏默认规则"};
+  else if (DATA.roleId_games && DATA.roleId_games.indexOf(game) !== -1) defaultRule = {method: "角色ID", source: "全游戏统一规则"};
+
+  if (rows.length === 0 && !defaultRule) {
+    box.innerHTML = '<div class="result-card not-found"><div class="result-method">未找到游戏规则</div>'
+      + '<div class="result-detail">游戏: ' + escH(game)
+      + '<br>该游戏暂无明确关联的客户端规则，请使用“按游戏+客户端”进行精确查询或联系管理员配置</div></div>';
+    return;
+  }
+
+  var summary = defaultRule ? "全客户端默认" + defaultRule.method : "已找到 " + rows.length + " 条客户端规则";
+  var s = '<div class="result-card found"><div class="result-method">' + escH(summary) + '</div>'
+    + '<div class="result-detail">游戏: ' + escH(game);
+  if (defaultRule) s += '<br>默认规则来源: ' + escH(defaultRule.source);
+  if (rows.length > 0) s += '<br>另有 ' + rows.length + ' 条明确客户端配置，详见下方';
+  s += '</div></div>';
+
+  if (rows.length > 0) {
+    s += '<div class="client-result-section"><h3>客户端规则 (' + rows.length + '条)</h3>'
+      + '<table class="client-result-table"><thead><tr><th>客户端</th><th>校验方式</th><th>备注</th></tr></thead><tbody>';
+    rows.forEach(function(item) {
+      var mc = "";
+      if (item.method === "角色ID") mc = "role";
+      else if (item.method === "渠道ID") mc = "channel";
+      else if (item.method === "渠道登录帐号") mc = "account";
+      s += '<tr><td>' + escH(item.client) + '</td><td><span class="method-badge ' + mc + '">' + escH(item.method) + '</span></td><td>' + escH(item.note || "-") + '</td></tr>';
+      if (item.image) s += '<tr><td colspan="3" style="padding:6px 10px"><img class="result-image" src="' + escH(item.image) + '" onerror="this.parentNode.parentNode.style.display=\'none\'"></td></tr>';
+    });
+    s += '</tbody></table></div>';
+  }
+
+  box.innerHTML = s;
+}
+
+// ============================================================
+// Datalist population
+// ============================================================
+function populateLists() {
+  var gs = {}, cs = {};
+  if (DATA.clientExceptions) Object.keys(DATA.clientExceptions).forEach(function(c) {
+    cs[c] = 1;
+    var v = DATA.clientExceptions[c];
+    if (Array.isArray(v)) v.forEach(function(g) { gs[g] = 1; });
+    else if (v && typeof v === "object") Object.keys(v).forEach(function(k) {
+      if (Array.isArray(v[k])) v[k].forEach(function(g) { gs[g] = 1; });
+    });
+  });
+  if (DATA.specialGames) Object.keys(DATA.specialGames).forEach(function(g) {
+    gs[g] = 1;
+    var sg = DATA.specialGames[g];
+    if (sg.exceptions) Object.keys(sg.exceptions).forEach(function(c) { cs[c] = 1; });
+    if (sg.rules) Object.keys(sg.rules).forEach(function(m) {
+      if (Array.isArray(sg.rules[m])) sg.rules[m].forEach(function(c) { cs[c] = 1; });
+    });
+    if (sg.roleId_clients) sg.roleId_clients.forEach(function(c) { cs[c] = 1; });
+  });
+  if (DATA.roleId_games) DATA.roleId_games.forEach(function(g) { gs[g] = 1; });
+  if (DATA.channelId_clients) DATA.channelId_clients.forEach(function(c) { cs[c] = 1; });
+  if (DATA.roleId_clients) DATA.roleId_clients.forEach(function(c) { cs[c] = 1; });
+  if (DATA.overrides) Object.keys(DATA.overrides).forEach(function(k) {
+    var p = k.split("|");
+    if (p[0]) gs[p[0]] = 1;
+    if (p[1]) cs[p[1]] = 1;
+  });
+  var gh = Object.keys(gs).sort().map(function(g) { return '<option value="' + escH(g) + '">'; }).join("");
+  var ch = Object.keys(cs).sort().map(function(c) { return '<option value="' + escH(c) + '">'; }).join("");
+  document.getElementById("dl-games").innerHTML = gh;
+  document.getElementById("dl-games2").innerHTML = gh;
+  document.getElementById("dl-clients").innerHTML = ch;
+  document.getElementById("dl-clients2").innerHTML = ch;
+}
+
+// ============================================================
+// Toast
+// ============================================================
+function showToast(msg, type) {
+  var c = document.getElementById("toastContainer");
+  var d = document.createElement("div");
+  d.className = "toast " + (type || "info");
+  d.textContent = msg;
+  c.appendChild(d);
+  setTimeout(function() {
+    d.style.animation = "toastOut .3s ease forwards";
+    setTimeout(function() { if (d.parentNode) d.parentNode.removeChild(d); }, 300);
+  }, 2500);
+}
+
+// ============================================================
+// Utilities
+// ============================================================
+function escH(s) { if (!s) return ""; return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function escJ(s) { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
+
+// ============================================================
+// Supabase cloud synchronization
+// ============================================================
+var CLOUD = window.UID_CLOUD_CONFIG || {};
+function cloudConfigured() {
+  return /^https:\/\/.+\.supabase\.co\/?$/.test(CLOUD.url || '') && !!CLOUD.anonKey;
+}
+function setCloudSync(text, type) {
+  var el = document.getElementById('cloudSync');
+  el.textContent = text;
+  el.className = 'cloud-sync' + (type ? ' ' + type : '');
+}
+async function loadCloudOverrides() {
+  if (!cloudConfigured()) {
+    setCloudSync('云端尚未配置，当前使用内置基础规则', 'error');
+    return 0;
+  }
+  var base = CLOUD.url.replace(/\/$/, '');
+  var table = CLOUD.table || 'uid_rules';
+  var res = await fetch(base + '/rest/v1/' + table + '?select=game_name,client_name,verify_method,note,image_url&order=updated_at.desc', {
+    headers: { 'apikey': CLOUD.anonKey, 'Authorization': 'Bearer ' + CLOUD.anonKey }
+  });
+  if (!res.ok) throw new Error('云端规则读取失败（' + res.status + '）');
+  var rows = await res.json();
+  DATA.overrides = {};
+  rows.forEach(function(row) {
+    DATA.overrides[row.game_name + '|' + row.client_name] = {
+      method: row.verify_method,
+      note: row.note || '',
+      image: row.image_url || ''
+    };
+  });
+  setCloudSync('云端规则已同步：' + rows.length + ' 条', 'ok');
+  return rows.length;
+}
+
+// ============================================================
+// Init
+// ============================================================
+document.addEventListener("DOMContentLoaded", async function() {
+  renderHistory();
+  try { await loadCloudOverrides(); }
+  catch(e) { setCloudSync(e.message + '，已回退到内置基础规则', 'error'); }
+  populateLists();
+});
+</script>
+</body>
+</html>
