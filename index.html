@@ -155,7 +155,6 @@ var DATA = {
     "叠纸": ["无限暖暖","恋与深空"],
     "雷霆": ["问道"],
     "当乐": ["攻城掠地"],
-    "百田": ["奥奇传说手游"],
     "贪玩": ["斗罗大陆：史莱克学院"],
     "西山居（金山）": ["尘白禁区"],
     "掌趣": ["一拳超人：最强之男"],
@@ -192,6 +191,13 @@ var CLIENT_ALIASES = {
   "魅族":"魅族&魅玩","盛大":"盛趣（盛大）","盛趣":"盛趣（盛大）"
 };
 function normalizeClient(c) { return CLIENT_ALIASES[c] || c; }
+function clientMatchesFamily(configuredClient, queryClient) {
+  var configured = normalizeClient(configuredClient);
+  var query = normalizeClient(queryClient);
+  return configured === query
+    || configured.indexOf(query + "（") === 0
+    || configured.indexOf(query + "(") === 0;
+}
 
 // ============================================================
 // Query history (in-memory for current page session)
@@ -394,12 +400,19 @@ function doClientQuery() {
   // Collect all info for this client
   var sections = [];
 
-  // 1. Check overrides
+  // 1. Check overrides, including controlled parenthesized client variants
   var overrideGames = [];
   if (DATA.overrides) {
     Object.keys(DATA.overrides).forEach(function(k) {
       var p = k.split("|");
-      if (p[1] === oc) overrideGames.push({game: p[0], method: DATA.overrides[k].method, note: DATA.overrides[k].note || "", image: DATA.overrides[k].image || ""});
+      if (clientMatchesFamily(p[1], oc)) {
+        var configuredClient = normalizeClient(p[1]);
+        var note = DATA.overrides[k].note || "";
+        if (configuredClient !== oc) {
+          note = "关联客户端：" + configuredClient + (note ? "；" + note : "");
+        }
+        overrideGames.push({game: p[0], method: DATA.overrides[k].method, note: note, image: DATA.overrides[k].image || ""});
+      }
     });
   }
   if (overrideGames.length > 0) {
